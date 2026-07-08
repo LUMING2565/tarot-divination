@@ -411,24 +411,42 @@
         MAJOR.forEach((c,i) => {
             deck.push({
                 id:i, type:"major", name_zh:c.n, name_en:c.en, suit:null, suit_zh:null,
-                element:c.e, keywords:c.kw, upright:c.u, reversed:c.r
+                element:c.e, keywords:c.kw,
+                upright:{summary:c.u.s, love:c.u.l, career:c.u.c, fortune:c.u.f},
+                reversed:{summary:c.r.s, love:c.r.l, career:c.r.c, fortune:c.r.f}
             });
         });
-        // Minor Arcana
+        // Minor Arcana — 根据花色生成不同领域的解读
         let cid = 22;
         for (const [sk, si] of Object.entries(MINOR_SUITS)) {
             for (const rk of MINOR_RANKS) {
                 const m = MINOR_MEANINGS[sk][rk];
                 const rzh = RANK_ZH[rk];
+                const expanded = expandMinorMeaning(m, sk);
                 deck.push({
                     id:cid++, type:"minor", name_zh:`${si.zh}${rzh}`, name_en:`${rk[0].toUpperCase()+rk.slice(1)} of ${sk[0].toUpperCase()+sk.slice(1)}`,
                     suit:sk, suit_zh:si.zh, element:si.e, keywords:[],
-                    upright:{summary:m.u, love:m.u, career:m.u, fortune:m.u},
-                    reversed:{summary:m.r, love:m.r, career:m.r, fortune:m.r}
+                    upright:expanded.u, reversed:expanded.r
                 });
             }
         }
         return deck;
+    }
+
+    function expandMinorMeaning(m, suit) {
+        // 根据花色为感情/事业/财运生成差异化解读
+        const domains = {
+            wands: {love:'感情上需要主动表达热情，但注意不要过于强势。', career:'事业上充满行动力和创造力，是开拓进取的好时机。', fortune:'财务上适合积极投资，但需控制风险。'},
+            cups:   {love:'感情上情感流动丰富，适合表达真心和建立深层连接。', career:'事业上适合团队合作和创意工作，信任直觉。', fortune:'财务上避免情绪化消费，感性之余也需理性规划。'},
+            swords: {love:'感情上需要清晰的沟通，避免误会和冷战。', career:'事业上需要理性决策和战略思维，勇敢面对挑战。', fortune:'财务上需精打细算，避免冲动投资和过度消费。'},
+            pentacles:{love:'感情上需要稳定和安全感，用行动而非言语表达爱。', career:'事业上脚踏实地，积累经验和资源，厚积薄发。', fortune:'财务上稳健增长，适合长期投资和储蓄计划。'}
+        };
+        const d = domains[suit] || domains.wands;
+        const um = m.u, rm = m.r;
+        return {
+            u: {summary:um, love:um + ' ' + d.love, career:um + ' ' + d.career, fortune:um + ' ' + d.fortune},
+            r: {summary:rm, love:rm + ' ' + d.love, career:rm + ' ' + d.career, fortune:rm + ' ' + d.fortune}
+        };
     }
 
     const ALL_CARDS = buildAllCards();
