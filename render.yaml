@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: tarot-divination
+    env: python
+    region: singapore  # 新加坡节点，国内访问较快
+    buildCommand: |
+      pip install -r tarot-backend/requirements.txt
+    startCommand: |
+      cd tarot-backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DEEPSEEK_API_KEY
+        sync: false  # 在 Render 控制台手动设置
