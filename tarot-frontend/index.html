@@ -15,6 +15,7 @@
             background: var(--bg); color: var(--text);
             font-family: 'Microsoft YaHei', 'PingFang SC', serif;
             min-height: 100vh; overflow-x: hidden;
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
         }
         #starfield { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
         .app-container { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; padding: 20px 16px; }
@@ -523,28 +524,46 @@
     }
 
     // ==================== 获取解读 ====================
+    let readingInProgress = false;
+
     async function getReading() {
+        if (readingInProgress) return; // 防止重复点击
         if (state.drawnCount < state.totalCards) revealAll();
 
-        // 尝试调用后端 AI
-        let aiResult = null;
+        readingInProgress = true;
+        document.getElementById('drawInstruction').textContent = '🔮 正在为你深度解读中...';
+
+        // 构建基础结果（使用用户已抽的牌，不会被替换）
+        let result = buildLocalReading();
+        state.readingResult = result;
+        switchStep('stepResult'); renderResult(); // 先展示结果
+
+        // 尝试调用后端 AI 获取增强解读
         const key = localStorage.getItem('deepseek_api_key') || '';
         try {
             const r = await fetch(`${API_BASE}/api/reading`, {
                 method:'POST', headers:{'Content-Type':'application/json','X-API-Key':key},
-                body:JSON.stringify({spread_type:state.spreadType,question:state.question}),
+                body:JSON.stringify({
+                    spread_type: state.spreadType,
+                    question: state.question,
+                    // 发送用户已抽的牌 ID，确保后端使用相同牌
+                    card_ids: state.drawnCards.map(c => c.id || c.card_id)
+                }),
                 signal: AbortSignal.timeout(15000)
             });
-            if (r.ok) { aiResult = await r.json(); state.aiPowered = aiResult.ai_powered; }
+            if (r.ok) {
+                const aiResult = await r.json();
+                if (aiResult.ai_powered && aiResult.overall_reading) {
+                    // 只使用 AI 的综合解读，保留用户抽的牌
+                    result.overall_reading = aiResult.overall_reading;
+                    result.ai_powered = true;
+                    state.aiPowered = true;
+                    renderResult(); // 刷新显示 AI 增强内容
+                }
+            }
         } catch(e) { console.log('API不可用，使用本地解读'); }
 
-        if (aiResult && aiResult.ai_powered) {
-            state.readingResult = aiResult;
-        } else {
-            state.readingResult = buildLocalReading();
-            state.aiPowered = false;
-        }
-        switchStep('stepResult'); renderResult();
+        readingInProgress = false;
     }
 
     function buildLocalReading() {
@@ -880,15 +899,17 @@
         const r = state.readingResult;
         document.getElementById('resultTitle').innerHTML = r.spread_name +
             (r.ai_powered ? ' <span class="ai-badge">🤖 AI增强</span>' : '');
+        document.getElementById('resultInfo').textContent = r.question ? '问：「' + r.question + '」' : r.spread_description;
         document.getElementById('resultInfo').textContent = r.question ? `问：「${r.question}」` : r.spread_description;
 
         document.getElementById('resultCards').innerHTML = r.cards.map((c,i) => `
-            <div class="result-mini-card played" onclick="document.getElementById('cardInterp${i}').scrollIntoView({behavior:'smooth',block:'center'})">
+            <div class="result-mini-card played" style="cursor:pointer" onclick="document.getElementById('cardInterp${i}').scrollIntoView({behavior:'smooth',block:'center'})">
                 <div class="mini-inner">
                     <div class="mini-face mini-back"><span>✦</span></div>
                     <div class="mini-face mini-front">
                         <div class="mini-name">${c.name_zh}</div>
                         <div class="mini-pos">${c.position}</div>
+                        <div style="font-size:8px;color:${c.is_reversed?'#c0392b':'#4a9'};margin-top:2px;">${c.is_reversed?'逆位 ⚠️':'正位 ✨'}</div>
                     </div>
                 </div>
             </div>`).join('');
