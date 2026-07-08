@@ -641,45 +641,40 @@
             }
         }
 
-        // === 综合分析 ===
-        text += '\n---\n## 🔮 综合解读与建议\n';
-
+        // === 🔮 核心：根据问题生成整体解读答案 ===
+        text += '\n---\n## 🔮 整体解读\n\n';
+        const question = state.question || '';
         const mc = majorCards.length;
         const rc = reversedCards.length;
 
-        if (mc >= 3) {
-            text += '🌟 **命运之力正在强力运作。**牌阵中出现三张以上的大阿卡纳，说明你所问之事绝非偶然，而是灵魂成长道路上的重要节点。每一个选择都将产生深远的影响。\n\n';
-        } else if (mc >= 1) {
-            text += '🔑 **重要的命运课题正在展开。**大阿卡纳的出现如同灯塔，照亮了你前行的方向。请认真聆听这些原型智慧带给你的启示。\n\n';
+        // 1. 问题相关域识别
+        const domain = detectDomain(question);
+
+        // 2. 生成叙事性综合答案
+        text += generateNarrativeAnswer(question, cards, domain, s);
+
+        // 3. 能量走向分析
+        text += '\n### 📈 能量走向\n';
+        text += analyzeEnergyFlow(cards);
+        text += '\n';
+
+        // 4. 正逆位综合判断
+        text += '\n### ⚖️ 总体判断\n';
+        if (rc === 0) {
+            text += '牌阵全部正位——✨ **大吉之兆**。所有能量都处于最佳流动状态，这是一个极为难得的时机，命运的齿轮正向你倾斜。大胆前行，宇宙在支持你。\n';
+        } else if (rc <= Math.floor(cards.length * 0.3)) {
+            text += '牌阵以正位为主，整体能量偏向积极。少量逆位牌的出现是在提醒你注意细节和内在功课，它们是指向成长的温柔提醒。\n';
+        } else if (rc <= Math.floor(cards.length * 0.5)) {
+            text += '正逆位交错，能量处于动态平衡中。这反映了你内心的拉扯——既有前进的动力，也有需要放下的包袱。当下的关键是找到平衡点。\n';
         } else {
-            text += '📋 **关注日常生活中的具体事务。**牌阵由小阿卡纳组成，说明问题主要集中在实际层面，脚踏实地地处理好每一件小事，就能看到明显的进展。\n\n';
+            text += '多张逆位牌出现，能量看似受阻，但请理解：逆位不是惩罚，而是宇宙在告诉你"换一个角度"。最深层的成长往往来自逆位牌的启示。\n';
         }
 
-        if (rc >= 3) {
-            text += '⚠️ **内在挑战值得关注。**多张牌以逆位出现，提示当前存在较多的内在阻塞或外部阻力。这不是坏消息——逆位牌往往比正位牌更深刻地揭示问题的根源。请利用这段时间进行深度内省，找出阻碍你前进的真正原因。\n\n';
-        } else if (rc === 0) {
-            text += '✨ **能量流动完美顺畅！**牌阵中全部为正位，所有能量都在最佳状态流动。这是一个极为难得的时机——万事俱备，大胆前行吧！但也要保持谦逊，顺境中的谨慎同样重要。\n\n';
-        } else {
-            let revNames = reversedCards.map(c=>c.name_zh).join('、');
-            text += `💡 **注意：${revNames} 以逆位出现。**逆位不是坏消息，而是提醒你在这个领域需要换个角度思考。逆位是成长的契机，它在对你说：请停下来，重新审视。\n\n`;
-        }
+        // 5. 可执行建议
+        text += '\n### 💫 给你的具体建议\n';
+        text += generateActionableAdvice(question, cards, domain);
 
-        // 实用建议
-        text += '### 💫 给你的建议\n';
-        const question = state.question || '';
-        if (question.includes('感情') || question.includes('恋') || question.includes('爱') || question.includes('关系')) {
-            text += '- 💕 **感情方面**：请关注牌阵中的水元素（圣杯牌）和大阿卡纳中的恋人、皇后等牌传递的信息。真诚的沟通和耐心的倾听是化解一切问题的钥匙。\n';
-        }
-        if (question.includes('事业') || question.includes('工作') || question.includes('职业') || question.includes('发展')) {
-            text += '- 💼 **事业方面**：关注火元素（权杖牌）和土元素（星币牌）的指引。行动力与务实态度结合，才能在职场上稳步前进。\n';
-        }
-        if (question.includes('财') || question.includes('钱') || question.includes('投资')) {
-            text += '- 💰 **财务方面**：土元素（星币牌）和风元素（宝剑牌）的牌将给你财务上的启示。理性决策、稳健投资是财富增长的关键。\n';
-        }
-        text += '- 🧘 **心灵成长**：无论牌面如何，请记住塔罗是你潜意识的镜子。真正的力量不在牌中，而在你解读牌面时内心的共鸣之中。\n';
-        text += '- 🌟 **行动建议**：牌阵已经揭示了当下的能量状态，下一步就是你的行动。选一张最有共鸣的牌，让它成为你这周的精神指引。\n';
-
-        text += '\n---\n> 🌙 塔罗牌是你潜意识的镜子，解读仅供参考。最终的选择权永远在你手中。';
+        text += '\n---\n> 🌙 塔罗是你潜意识的镜子，以上解读是你内心智慧的映射。最终的选择权与力量永远在你手中。';
 
         return {
             reading_id:'local-'+Date.now(), spread_name:s.name, spread_description:s.desc,
@@ -712,6 +707,172 @@
         if (idx === 0) return '牌阵的起点，奠定整个解读的基调。';
         if (idx === allCards.length - 1) return '牌阵的终点，揭示整个能量流动的归宿。';
         return null;
+    }
+
+    function detectDomain(question) {
+        // 识别用户问题的核心领域
+        const q = question.toLowerCase();
+        if (/感情|恋爱|爱情|婚姻|分手|复合|对象|伴侣/.test(q)) return 'love';
+        if (/事业|工作|职业|职场|跳槽|升职|创业/.test(q)) return 'career';
+        if (/财运|钱|投资|理财|收入|负债|经济/.test(q)) return 'wealth';
+        if (/学业|考试|学习|成绩|考研|高考/.test(q)) return 'study';
+        if (/健康|身体|疾病/.test(q)) return 'health';
+        return 'general';
+    }
+
+    function generateNarrativeAnswer(question, cards, domain, spread) {
+        let narrative = '';
+
+        // 开场：直接回应问题
+        if (question) {
+            narrative += `针对你提出的问题「**${question}**」，牌阵给出了以下回应：\n\n`;
+        }
+
+        // 按牌位顺序串联故事情节
+        const story = [];
+        for (const c of cards) {
+            const posName = c.position;
+            const cardName = c.name_zh;
+            const dir = c.is_reversed ? '逆位' : '正位';
+            const meaning = c.interpretation.summary || c.interpretation.s || '';
+            story.push({ posName, cardName, dir, meaning, isReversed: c.is_reversed, type: c.type, element: c.element, suit: c.suit, keywords: c.keywords });
+        }
+
+        // 合成故事性叙述
+        narrative += '> ';
+        if (spread.name.includes('三张') || spread.name.includes('过去')) {
+            // 过去-现在-未来 时间线叙事
+            const past = story.find(s => s.posName.includes('过去'));
+            const now = story.find(s => s.posName.includes('现在') || s.posName.includes('当前'));
+            const future = story.find(s => s.posName.includes('未来') || s.posName.includes('结果'));
+            if (past && now && future) {
+                narrative += `从时间线来看，${past.posName}的「${past.cardName}」(${past.dir})揭示了${past.meaning.slice(0, 40)}... `;
+                narrative += `到了${now.posName}，「${now.cardName}」(${now.dir})表明${now.meaning.slice(0, 40)}... `;
+                narrative += `展望${future.posName}，「${future.cardName}」(${future.dir})预示着${future.meaning.slice(0, 40)}... `;
+                narrative += '\n\n';
+                // 判断整体趋势
+                const allPositive = !past.isReversed && !now.isReversed && !future.isReversed;
+                const allNegative = past.isReversed && now.isReversed && future.isReversed;
+                const improving = past.isReversed && !future.isReversed;
+                const declining = !past.isReversed && future.isReversed;
+                if (allPositive) narrative += '✨ **整体判断：能量持续向好！**从过去到现在到未来，能量始终积极正向，这是一个值得期待的发展周期。\n';
+                else if (allNegative) narrative += '⚠️ **整体判断：当前处于调整期。**三个时间点均以逆位呈现，提示你需要全面反思和内在调整。但这意味着——转机即将到来。\n';
+                else if (improving) narrative += '🌅 **整体判断：正在走出低谷。**过去虽有困难，但现在是转折点，未来的能量正在向好转变。坚持下去！\n';
+                else if (declining) narrative += '🔔 **整体判断：需要警惕。**过去较为顺遂，但如果不注意调整，未来可能出现挑战。现在是改变的关键时机。\n';
+            } else {
+                narrative += buildGenericNarrative(story);
+            }
+        } else {
+            narrative += buildGenericNarrative(story);
+        }
+
+        // 领域专项分析
+        narrative += '\n### 🎯 针对你的问题领域\n';
+        if (domain === 'love') {
+            const loveCards = cards.filter(c => c.name_zh.includes('恋人') || c.name_zh.includes('圣杯') || c.name_zh.includes('皇后') || c.name_zh.includes('皇帝'));
+            if (loveCards.length > 0) {
+                narrative += `牌阵中出现了与感情密切相关的牌（${loveCards.map(c=>c.name_zh).join('、')}），`);
+                const hasLovers = loveCards.some(c => c.name_zh === '恋人');
+                const hasCups = loveCards.some(c => c.suit === 'cups');
+                if (hasLovers && hasCups) narrative += '这是非常强烈的感情指引信号。恋人牌与圣杯牌的共振表明，你当前的感情课题是灵魂层面的重要功课。真诚沟通与心灵契合是关键。\n';
+                else if (hasLovers) narrative += '恋人牌的出现提示你面临重要的感情选择。请用心灵而非头脑来做决定。\n';
+                else narrative += '圣杯牌组的能量提示你多关注自己的情感需求和直觉感受。\n';
+            } else {
+                narrative += '牌阵未直接出现感情牌，但综合所有牌的能量，建议你先专注于自我成长——最好的爱情，往往在你成为最好的自己时不期而至。\n';
+            }
+        } else if (domain === 'career') {
+            const careerCards = cards.filter(c => c.name_zh.includes('权杖') || c.name_zh.includes('星币') || c.name_zh.includes('战车') || c.name_zh.includes('皇帝') || c.name_zh.includes('魔术师'));
+            if (careerCards.length > 0) {
+                narrative += `牌阵中事业相关牌出现${careerCards.length}张（${careerCards.map(c=>c.name_zh).join('、')}）。`;
+                // 综合分析
+                const hasAction = careerCards.some(c => c.suit === 'wands' || c.name_zh === '战车');
+                const hasStable = careerCards.some(c => c.suit === 'pentacles' || c.name_zh === '皇帝');
+                if (hasAction && hasStable) narrative += '行动力与稳定性兼具——这是事业发展的黄金组合。有权杖的冲劲，也有星币的稳健，把握好节奏方能持久。\n';
+                else if (hasAction) narrative += '行动力充沛但稳定性不足。建议在冲刺的同时不要忽视打基础。\n';
+                else narrative += '基础扎实但需要更多主动出击。适当走出舒适区会有意想不到的收获。\n';
+            } else {
+                narrative += '牌阵未直接出现事业牌，但每张牌都能映射到职场智慧。建议从牌面关键词中找到对工作最有启发的那一句，作为本周的行动指南。\n';
+            }
+        } else if (domain === 'wealth') {
+            const wealthCards = cards.filter(c => c.suit === 'pentacles' || c.name_zh.includes('星币'));
+            if (wealthCards.length > 0) {
+                narrative += `牌阵中出现${wealthCards.length}张星币牌，财务相关能量极强。`;
+                const allUpright = wealthCards.every(c => !c.is_reversed);
+                if (allUpright) narrative += '所有财务牌均为正位，财富能量流动顺畅。现在正是规划长远财务的好时机。\n';
+                else narrative += '部分财务牌处于逆位，提示需要审视消费习惯和投资策略，避免不理智的财务决策。\n';
+            } else {
+                narrative += '牌阵未直接出现财务牌。建议这段时间先做好财务基本功——记账、储蓄、减少不必要开支。财务自由从自律开始。\n';
+            }
+        } else {
+            // 通用领域
+            narrative += '牌阵从多个维度为你揭示了当下的能量状态。请仔细阅读每张牌的指引，你内心最被触动的那条信息，就是你此刻最需要的答案。\n';
+        }
+
+        return narrative;
+    }
+
+    function buildGenericNarrative(story) {
+        // 通用叙事：按牌位顺序串联
+        let text = '';
+        const len = story.length;
+        for (let i = 0; i < len; i++) {
+            const s = story[i];
+            if (i === 0) text += `牌阵的起点「${s.posName}」位置上，「${s.cardName}」(${s.dir})奠定了整个解读的基调：${s.meaning.slice(0, 60)}。`;
+            else if (i === len - 1) text += ` 最终「${s.posName}」位置的「${s.cardName}」(${s.dir})揭示了事件的归宿：${s.meaning.slice(0, 60)}。`;
+            else text += ` 在「${s.posName}」位置，「${s.cardName}」(${s.dir})作为关键枢纽，连接了前后能量的流动。`;
+        }
+        return text + '\n\n';
+    }
+
+    function analyzeEnergyFlow(cards) {
+        const first = cards[0], last = cards[cards.length - 1];
+        const firstGood = !first.is_reversed;
+        const lastGood = !last.is_reversed;
+
+        if (firstGood && lastGood) {
+            return '从牌阵起点到终点，能量保持正向流动。整个过程处于积极、顺畅的状态。你只需保持当前的节奏，顺势而为即可。';
+        } else if (!firstGood && lastGood) {
+            return '从起点的不确定或挑战，到终点的明朗与积极——这是一个**渐入佳境**的过程。初期的困难是成长的催化剂，最终的收获会证明一切等待都值得。';
+        } else if (firstGood && !lastGood) {
+            return '起点虽好，终点却有警示。这不是坏消息，而是珍贵的提醒——如果继续当前的模式，可能会遇到阻碍。**现在是调整航向的最佳时机**。';
+        } else {
+            return '全程能量处于挑战期。但这往往是成长最快的阶段——逆位牌教给我们的，往往比正位牌更多。请把这段时间视为灵魂的修炼期。';
+        }
+    }
+
+    function generateActionableAdvice(question, cards, domain) {
+        let advice = '';
+
+        // 基于问题给出具体建议
+        if (domain === 'love') {
+            advice += '- 💕 本周至少对伴侣（或心仪对象）真诚表达一次感受，用"我"语句而非"你"语句沟通\n';
+            advice += '- 🌙 独处时问自己：这段关系中我最需要的是什么？我有哪些恐惧需要放下？\n';
+        } else if (domain === 'career') {
+            advice += '- 💼 本周列出三个可量化的职业小目标，哪怕只是整理简历或学习一个新技能\n';
+            advice += '- 📋 主动约一位值得信任的前辈/导师喝咖啡，听听他们对你的职业建议\n';
+        } else if (domain === 'wealth') {
+            advice += '- 💰 本周认真审视一次你的收支状况，找出三个可以优化的开支项目\n';
+            advice += '- 📊 花30分钟学习一个基础理财概念（复利、基金定投、资产配置）\n';
+        } else {
+            advice += '- 📝 写下牌阵中最触动你的那张牌，把它作为这周的"守护牌"，每天看一眼\n';
+            advice += '- 🧘 每天花5分钟静坐，观察自己的思绪而不评判，答案往往在安静中出现\n';
+        }
+
+        // 基于牌面给额外建议
+        const hasTower = cards.some(c => c.name_zh === '高塔');
+        const hasDeath = cards.some(c => c.name_zh === '死神');
+        const hasSun = cards.some(c => c.name_zh === '太阳');
+        const hasStar = cards.some(c => c.name_zh === '星星');
+
+        if (hasTower || hasDeath) {
+            advice += '- 🔥 牌面提示重大转变在即。请勇敢放手那些不再服务于你的人事物——旧的离开才能为新的腾出空间\n';
+        }
+        if (hasSun || hasStar) {
+            advice += '- ✨ 希望之光已在牌阵中闪耀。即使暂时看不到出路，也请相信好事正在来的路上。保持积极期待\n';
+        }
+        advice += '- 🌟 选一张最有共鸣的牌，让它成为你本周的精神图腾。每天早上看它一眼，感受它传递的能量\n';
+
+        return advice;
     }
 
     // ==================== 渲染结果 ====================
