@@ -771,7 +771,7 @@
         if (domain === 'love') {
             const loveCards = cards.filter(c => c.name_zh.includes('恋人') || c.name_zh.includes('圣杯') || c.name_zh.includes('皇后') || c.name_zh.includes('皇帝'));
             if (loveCards.length > 0) {
-                narrative += `牌阵中出现了与感情密切相关的牌（${loveCards.map(c=>c.name_zh).join('、')}），`);
+                narrative += `牌阵中出现了与感情密切相关的牌（${loveCards.map(c=>c.name_zh).join('、')}），`;
                 const hasLovers = loveCards.some(c => c.name_zh === '恋人');
                 const hasCups = loveCards.some(c => c.suit === 'cups');
                 if (hasLovers && hasCups) narrative += '这是非常强烈的感情指引信号。恋人牌与圣杯牌的共振表明，你当前的感情课题是灵魂层面的重要功课。真诚沟通与心灵契合是关键。\n';
