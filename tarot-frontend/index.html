@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🔮 塔罗牌占卜</title>
+    <title>🔮 塔罗牌占卜 v2.5</title>
     <style>
         :root {
             --bg: #0a0a1a; --card-bg: #1a1040; --gold: #d4a843; --gold-light: #f0d68a;
@@ -474,10 +474,11 @@
             pentacles:{love:'感情上需要稳定和安全感，用行动而非言语表达爱。', career:'事业上脚踏实地，积累经验和资源，厚积薄发。', fortune:'财务上稳健增长，适合长期投资和储蓄计划。'}
         };
         const d = domains[suit] || domains.wands;
-        const um = m.u, rm = m.r;
+        const um = m.u || '', rm = m.r || '';
+        // 确保三个领域解读不同（加不同后缀）
         return {
-            u: {summary:um, love:um + ' ' + d.love, career:um + ' ' + d.career, fortune:um + ' ' + d.fortune},
-            r: {summary:rm, love:rm + ' ' + d.love, career:rm + ' ' + d.career, fortune:rm + ' ' + d.fortune}
+            u: {summary:um, love:um + '【感情】' + d.love, career:um + '【事业】' + d.career, fortune:um + '【财运】' + d.fortune},
+            r: {summary:rm, love:rm + '【感情】' + d.love, career:rm + '【事业】' + d.career, fortune:rm + '【财运】' + d.fortune}
         };
     }
 
@@ -971,30 +972,30 @@
 
         let html = '<h3>📜 牌阵解读</h3>';
         r.cards.forEach((c,i) => {
-            const interp = c.interpretation || {};
-            const cs = cardFaceStyle(c);
-            html += `<div class="card-interp" id="cardInterp${i}">
-                <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
-                    <div style="width:80px;height:120px;flex-shrink:0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;${cs.bg.startsWith('linear')?'background:'+cs.bg:'background:'+cs.bg};border:2px solid ${cs.border};">
-                        <div style="font-size:28px;">${cs.icon}</div>
-                        <div style="font-size:10px;color:${cs.accent};font-weight:bold;text-align:center;line-height:1.1;margin-top:4px;">${c.name_zh}</div>
-                        <div style="font-size:8px;color:${c.is_reversed?'#e74c3c':'#2ecc71'};margin-top:2px;">${c.is_reversed?'逆位':'正位'}</div>
-                    </div>
-                    <div style="flex:1;min-width:180px;">
-                        <div class="card-interp-header">
-                            <span class="card-title">${c.name_zh} · ${c.name_en||''}</span>
-                            <span class="pos-tag">${c.position}</span>
-                            ${c.is_reversed?'<span class="rev-tag">逆位 ⚠️</span>':'<span style="color:#d4a843;font-size:11px;">正位 ✨</span>'}
-                        </div>
-                        <div class="card-interp-summary">${interp.summary||interp.s||'请参考综合解读'}</div>
-                        <div class="interp-grid">
-                            ${interp.love?`<div class="interp-item"><strong>💕 感情</strong><br>${interp.love}</div>`:''}
-                            ${interp.career?`<div class="interp-item"><strong>💼 事业</strong><br>${interp.career}</div>`:''}
-                            ${interp.fortune?`<div class="interp-item"><strong>💰 财运</strong><br>${interp.fortune}</div>`:''}
-                        </div>
-                    </div>
-                </div>
-            </div>`;
+            var interp = c.interpretation || {};
+            // 确保 always 有值（防御性回退）
+            var loveTxt = interp.love || interp.l || '';
+            var careerTxt = interp.career || interp.c || '';
+            var fortuneTxt = interp.fortune || interp.f || '';
+            var summaryTxt = interp.summary || interp.s || '';
+            var cs = cardFaceStyle(c);
+            html += '<div class="card-interp" id="cardInterp' + i + '">';
+            html += '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">';
+            html += '<div style="width:80px;height:120px;flex-shrink:0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;' + (cs.bg.startsWith('linear') ? 'background:'+cs.bg : 'background:'+cs.bg) + ';border:2px solid ' + cs.border + ';">';
+            html += '<div style="font-size:28px;">' + cs.icon + '</div>';
+            html += '<div style="font-size:10px;color:' + cs.accent + ';font-weight:bold;text-align:center;line-height:1.1;margin-top:4px;">' + c.name_zh + '</div>';
+            html += '<div style="font-size:8px;color:' + (c.is_reversed ? '#e74c3c' : '#2ecc71') + ';margin-top:2px;">' + (c.is_reversed ? '逆位' : '正位') + '</div></div>';
+            html += '<div style="flex:1;min-width:180px;">';
+            html += '<div class="card-interp-header"><span class="card-title">' + c.name_zh + ' · ' + (c.name_en||'') + '</span>';
+            html += '<span class="pos-tag">' + c.position + '</span>';
+            html += (c.is_reversed ? '<span class="rev-tag">逆位 ⚠️</span>' : '<span style="color:#d4a843;font-size:11px;">正位 ✨</span>');
+            html += '</div>';
+            html += '<div class="card-interp-summary">' + (summaryTxt || '请参考综合解读') + '</div>';
+            html += '<div class="interp-grid">';
+            if (loveTxt) html += '<div class="interp-item"><strong>💕 感情</strong><br>' + loveTxt + '</div>';
+            if (careerTxt) html += '<div class="interp-item"><strong>💼 事业</strong><br>' + careerTxt + '</div>';
+            if (fortuneTxt) html += '<div class="interp-item"><strong>💰 财运</strong><br>' + fortuneTxt + '</div>';
+            html += '</div></div></div></div>';
         });
         html += `<div class="overall-reading">${simpleMd(r.overall_reading)}</div>`;
         document.getElementById('readingDetail').innerHTML = html;
