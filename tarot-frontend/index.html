@@ -450,9 +450,19 @@
         return deck;
     }
 
-    function picUrl(code) {
-        // 百年韦特塔罗牌 — 公共领域图片源
-        return `https://www.sacred-texts.com/tarot/pics/${code}.jpg`;
+    function picUrl(code) { return ''; } // 使用 CSS 卡面，无需外部图片
+
+    // 根据花色/元素生成卡面样式
+    function cardFaceStyle(card) {
+        const el = card.element || '';
+        const colors = {
+            '火': {bg:'linear-gradient(135deg, #3d1010, #6b2020)', border:'#c0392b', icon:'🔥', accent:'#e74c3c'},
+            '水': {bg:'linear-gradient(135deg, #0d1b3d, #1a3a6b)', border:'#2980b9', icon:'💧', accent:'#3498db'},
+            '风': {bg:'linear-gradient(135deg, #1a1a3d, #3d3d6b)', border:'#f39c12', icon:'💨', accent:'#f1c40f'},
+            '土': {bg:'linear-gradient(135deg, #1a2d0d, #3d5a1a)', border:'#27ae60', icon:'🌿', accent:'#2ecc71'},
+        };
+        const c = colors[el] || {bg:'linear-gradient(135deg, #1a1040, #2d1050)', border:'#d4a843', icon:'✦', accent:'#f0d68a'};
+        return c;
     }
 
     function expandMinorMeaning(m, suit) {
@@ -541,17 +551,17 @@
         const el = document.getElementById(`drawCard${index}`);
         el.classList.add('flipped');
         const front = el.querySelector('.card-front');
+        const cs = cardFaceStyle(cardData);
         front.className = `card-face card-front ${isRev?'reversed-card':''}`;
+        front.style.cssText = `background:${cs.bg};border-color:${cs.border};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;`;
         front.innerHTML = `
-            <img src="${cardData.img||''}" alt="${cardData.name_zh}" onerror="this.style.display='none'" loading="lazy">
-            <div class="card-overlay">
-                ${isRev?'<div class="reversed-badge">逆位</div>':''}
-                <div class="card-type-badge">${cardData.type==='major'?'大阿卡纳':cardData.suit_zh||''}</div>
-                <div class="card-name">${cardData.name_zh}</div>
-                <div class="card-element">${cardData.element||''}</div>
-                <div class="card-keywords">${(cardData.keywords||[]).slice(0,4).join(' · ')}</div>
-                <div class="card-position-label">第${index+1}张</div>
-            </div>`;
+            <div style="font-size:28px;margin-bottom:4px;">${cs.icon}</div>
+            <div style="font-size:10px;color:${cs.accent};letter-spacing:2px;margin-bottom:2px;">${cardData.type==='major'?'MAJOR ARCANA':cardData.suit_zh||''}</div>
+            <div style="color:#fff;font-weight:bold;font-size:12px;text-align:center;line-height:1.2;margin:4px 0;">${cardData.name_zh}</div>
+            <div style="font-size:8px;color:${cs.accent};opacity:0.7;">${cardData.element||''}元素</div>
+            ${cardData.keywords && cardData.keywords.length > 0 ? `<div style="font-size:7px;color:${cs.accent};opacity:0.6;margin-top:4px;text-align:center;">${cardData.keywords.slice(0,3).join('·')}</div>` : ''}
+            ${isRev?'<div style="position:absolute;top:4px;right:6px;background:#c0392b;color:#fff;font-size:8px;padding:1px 5px;border-radius:5px;">逆位</div>':''}
+            <div style="position:absolute;bottom:4px;font-size:8px;color:${cs.accent};opacity:0.6;">第${index+1}张</div>`;
 
         const remaining = state.totalCards - state.drawnCount;
         if (remaining > 0) {
@@ -944,32 +954,35 @@
             (r.ai_powered ? ' <span class="ai-badge">🤖 AI增强</span>' : '');
         document.getElementById('resultInfo').textContent = r.question ? '问：「' + r.question + '」' : r.spread_description;
 
-        document.getElementById('resultCards').innerHTML = r.cards.map((c,i) => `
-            <div class="result-mini-card played" style="cursor:pointer" onclick="document.getElementById('cardInterp${i}').scrollIntoView({behavior:'smooth',block:'center'})">
+        document.getElementById('resultCards').innerHTML = r.cards.map((c,i) => {
+            const cs = cardFaceStyle(c);
+            return `<div class="result-mini-card played" style="cursor:pointer" onclick="document.getElementById('cardInterp${i}').scrollIntoView({behavior:'smooth',block:'center'})">
                 <div class="mini-inner">
                     <div class="mini-face mini-back"><span>✦</span></div>
-                    <div class="mini-face mini-front" style="padding:0;overflow:hidden;">
-                        <img src="${c.img||''}" alt="${c.name_zh}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'" loading="lazy">
-                        <div style="position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:4px;background:rgba(245,240,232,0.8);width:100%;height:100%;box-sizing:border-box;">
-                            <div class="mini-name">${c.name_zh}</div>
-                            <div class="mini-pos">${c.position}</div>
-                            <div style="font-size:7px;color:${c.is_reversed?'#c0392b':'#4a9'};margin-top:1px;">${c.is_reversed?'逆位':'正位'}</div>
-                        </div>
+                    <div class="mini-face mini-front" style="padding:6px;background:${cs.bg};border-color:${cs.border};display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                        <div style="font-size:16px;">${cs.icon}</div>
+                        <div class="mini-name" style="color:#fff;">${c.name_zh}</div>
+                        <div class="mini-pos" style="color:${cs.accent};">${c.position}</div>
+                        <div style="font-size:7px;color:${c.is_reversed?'#e74c3c':'#2ecc71'};margin-top:1px;">${c.is_reversed?'⚠逆位':'✨正位'}</div>
                     </div>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
 
         let html = '<h3>📜 牌阵解读</h3>';
         r.cards.forEach((c,i) => {
             const interp = c.interpretation || {};
+            const cs = cardFaceStyle(c);
             html += `<div class="card-interp" id="cardInterp${i}">
                 <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
-                    <div style="width:90px;height:140px;flex-shrink:0;border-radius:8px;overflow:hidden;border:2px solid #8b6914;background:linear-gradient(135deg,#1a1040,#2d1050);">
-                        <img src="${c.img||''}" alt="${c.name_zh}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.display='none'" loading="lazy">
+                    <div style="width:80px;height:120px;flex-shrink:0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;${cs.bg.startsWith('linear')?'background:'+cs.bg:'background:'+cs.bg};border:2px solid ${cs.border};">
+                        <div style="font-size:28px;">${cs.icon}</div>
+                        <div style="font-size:10px;color:${cs.accent};font-weight:bold;text-align:center;line-height:1.1;margin-top:4px;">${c.name_zh}</div>
+                        <div style="font-size:8px;color:${c.is_reversed?'#e74c3c':'#2ecc71'};margin-top:2px;">${c.is_reversed?'逆位':'正位'}</div>
                     </div>
                     <div style="flex:1;min-width:180px;">
                         <div class="card-interp-header">
-                            <span class="card-title">${c.name_zh}</span>
+                            <span class="card-title">${c.name_zh} · ${c.name_en||''}</span>
                             <span class="pos-tag">${c.position}</span>
                             ${c.is_reversed?'<span class="rev-tag">逆位 ⚠️</span>':'<span style="color:#d4a843;font-size:11px;">正位 ✨</span>'}
                         </div>
