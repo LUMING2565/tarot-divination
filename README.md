@@ -3,7 +3,8 @@ title: 🔮 Tarot Divination
 emoji: 🔮
 colorFrom: purple
 colorTo: indigo
-sdk: docker
+sdk: gradio
+sdk_version: 4.44.0
 pinned: false
 ---
 
