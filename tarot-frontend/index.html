@@ -553,33 +553,165 @@
             ...c, position: s.pos[i]||`第${i+1}张`, position_index: i
         }));
 
-        // 逐牌解读
+        // === 逐牌解读 ===
         let text = `📜 **${s.name}**\n`;
         if (state.question) text += `🎴 问题：「${state.question}」\n`;
+        text += '\n---\n## 📜 各牌位详细解读\n';
+
         for (const c of cards) {
             const d = c.is_reversed ? '逆位 ⚠️' : '正位 ✨';
             const interp = c.interpretation;
-            text += `\n### [${c.position}] ${c.name_zh} — ${d}\n**${interp.summary || interp.s || ''}**\n`;
+            const posContext = getPositionContext(c.position, c, cards);
+            text += `\n### [${c.position}] ${c.name_zh} — ${d}\n`;
+            text += `**${interp.summary || interp.s || ''}**\n`;
+            if (posContext) text += `*${posContext}*\n`;
             for (const [k,em] of [['love','💕 感情'],['career','💼 事业'],['fortune','💰 财运']]) {
                 if (interp[k]) text += `- ${em}：${interp[k]}\n`;
             }
         }
-        // 综合分析
-        const mc = cards.filter(c=>c.type==='major').length;
-        const rc = cards.filter(c=>c.is_reversed).length;
-        text += '\n---\n## 🔮 综合分析\n';
-        if (mc >= 3) text += '牌阵中多张大阿卡纳齐聚，命运之力正以强大的能量运作，这将是影响深远的关键时期。\n';
-        else if (mc >= 1) text += '大阿卡纳的出现表明重要的命运课题正在展开，请用心体会其中的深意。\n';
-        else text += '牌阵全部为小阿卡纳，提示当前问题主要体现在日常生活和具体事务上，从细节入手即可。\n';
-        if (rc >= 3) text += '多张牌以逆位出现，提示当前存在较多阻碍和内在的挑战。请静心内省，逆位不是惩罚而是成长的契机。\n';
-        else if (rc === 0) text += '✨ 全部正位！能量流动极为顺畅，这是一个万事俱备的好时机，大胆前行吧。\n';
-        text += '\n> 🌙 塔罗牌是你潜意识的镜子，解读仅供参考。最终的选择权永远在你手中。';
+
+        // === 元素分析 ===
+        const elements = {};
+        for (const c of cards) {
+            const el = c.element || '未知';
+            elements[el] = (elements[el]||0) + 1;
+        }
+        text += '\n---\n## 🌿 元素能量分析\n';
+        for (const [el,count] of Object.entries(elements)) {
+            const percentage = Math.round(count/cards.length*100);
+            const bar = '█'.repeat(Math.round(percentage/10)) + '░'.repeat(10-Math.round(percentage/10));
+            text += `- **${el}元素**：${bar} ${percentage}%\n`;
+        }
+        const dominantEl = Object.entries(elements).sort((a,b)=>b[1]-a[1])[0];
+        const elDesc = {
+            '火': '火元素旺盛，行动力与激情充沛。适合主动出击、开创事业。但需避免冲动和急躁。',
+            '水': '水元素主导，情感与直觉敏锐。适合处理人际关系、创作和心灵探索。但需避免情绪化。',
+            '风': '风元素强劲，思维清晰敏捷。适合学习、沟通和决策。但需避免空想和犹豫不决。',
+            '土': '土元素稳固，务实可靠。适合理财、规划和长期建设。但需避免固执和保守。'
+        };
+        if (elDesc[dominantEl[0]]) text += `\n${elDesc[dominantEl[0]]}\n`;
+
+        // === 牌面联动 ===
+        text += '\n---\n## 🔗 牌面联动分析\n';
+        const majorCards = cards.filter(c=>c.type==='major');
+        const minorCards = cards.filter(c=>c.type==='minor');
+        const reversedCards = cards.filter(c=>c.is_reversed);
+
+        // 大牌联动
+        if (majorCards.length >= 2) {
+            text += '\n**🏛 大阿卡纳联动：**\n';
+            text += `牌阵中出现 ${majorCards.length} 张大阿卡纳（${majorCards.map(c=>c.name_zh).join('、')}），`;
+            text += '这些原型能量互相交织，表明当前的课题具有深远的人生意义。';
+            if (majorCards.some(c=>['死神','高塔'].includes(c.name_zh))) {
+                text += '\n⚠️ 其中出现了重大转变牌（死神/高塔），预示着深刻的人生转折，旧的模式必须瓦解才能迎来新生。';
+            }
+            if (majorCards.some(c=>['太阳','星星','世界'].includes(c.name_zh))) {
+                text += '\n✨ 同时出现积极结果牌（太阳/星星/世界），无论当前多么困难，美好的结局正在等待着你。';
+            }
+            text += '\n';
+        }
+
+        // 同花色联动
+        const suitGroups = {};
+        for (const c of minorCards) {
+            if (c.suit) {
+                if (!suitGroups[c.suit]) suitGroups[c.suit] = [];
+                suitGroups[c.suit].push(c);
+            }
+        }
+        for (const [suit, scards] of Object.entries(suitGroups)) {
+            if (scards.length >= 2) {
+                const suitName = scards[0].suit_zh;
+                const suitDomain = {wands:'行动与事业', cups:'情感与关系', swords:'思想与决策', pentacles:'财富与物质'};
+                text += `\n**${'🪄🔮⚔️🪙'[{wands:0,cups:1,swords:2,pentacles:3}[suit]]} ${suitName}牌组集中：**`;
+                text += `多张${suitName}牌出现，说明${suitDomain[suit]||''}是当前的核心主题，需要重点关注。\n`;
+            }
+        }
+
+        // 矛盾/互补分析
+        if (cards.length >= 2) {
+            const first = cards[0], last = cards[cards.length-1];
+            if (first.is_reversed !== last.is_reversed) {
+                text += '\n**🔄 牌阵走向：**';
+                if (!first.is_reversed && last.is_reversed) {
+                    text += '牌阵从正位走向逆位，提示当前的正向能量可能遇到阻碍，需要在后期格外注意调整心态和策略。\n';
+                } else {
+                    text += '牌阵从逆位走向正位，这是一个由阴转阳的过程，初期的困难和阻碍将在后期逐渐化解。\n';
+                }
+            }
+        }
+
+        // === 综合分析 ===
+        text += '\n---\n## 🔮 综合解读与建议\n';
+
+        const mc = majorCards.length;
+        const rc = reversedCards.length;
+
+        if (mc >= 3) {
+            text += '🌟 **命运之力正在强力运作。**牌阵中出现三张以上的大阿卡纳，说明你所问之事绝非偶然，而是灵魂成长道路上的重要节点。每一个选择都将产生深远的影响。\n\n';
+        } else if (mc >= 1) {
+            text += '🔑 **重要的命运课题正在展开。**大阿卡纳的出现如同灯塔，照亮了你前行的方向。请认真聆听这些原型智慧带给你的启示。\n\n';
+        } else {
+            text += '📋 **关注日常生活中的具体事务。**牌阵由小阿卡纳组成，说明问题主要集中在实际层面，脚踏实地地处理好每一件小事，就能看到明显的进展。\n\n';
+        }
+
+        if (rc >= 3) {
+            text += '⚠️ **内在挑战值得关注。**多张牌以逆位出现，提示当前存在较多的内在阻塞或外部阻力。这不是坏消息——逆位牌往往比正位牌更深刻地揭示问题的根源。请利用这段时间进行深度内省，找出阻碍你前进的真正原因。\n\n';
+        } else if (rc === 0) {
+            text += '✨ **能量流动完美顺畅！**牌阵中全部为正位，所有能量都在最佳状态流动。这是一个极为难得的时机——万事俱备，大胆前行吧！但也要保持谦逊，顺境中的谨慎同样重要。\n\n';
+        } else {
+            let revNames = reversedCards.map(c=>c.name_zh).join('、');
+            text += `💡 **注意：${revNames} 以逆位出现。**逆位不是坏消息，而是提醒你在这个领域需要换个角度思考。逆位是成长的契机，它在对你说：请停下来，重新审视。\n\n`;
+        }
+
+        // 实用建议
+        text += '### 💫 给你的建议\n';
+        const question = state.question || '';
+        if (question.includes('感情') || question.includes('恋') || question.includes('爱') || question.includes('关系')) {
+            text += '- 💕 **感情方面**：请关注牌阵中的水元素（圣杯牌）和大阿卡纳中的恋人、皇后等牌传递的信息。真诚的沟通和耐心的倾听是化解一切问题的钥匙。\n';
+        }
+        if (question.includes('事业') || question.includes('工作') || question.includes('职业') || question.includes('发展')) {
+            text += '- 💼 **事业方面**：关注火元素（权杖牌）和土元素（星币牌）的指引。行动力与务实态度结合，才能在职场上稳步前进。\n';
+        }
+        if (question.includes('财') || question.includes('钱') || question.includes('投资')) {
+            text += '- 💰 **财务方面**：土元素（星币牌）和风元素（宝剑牌）的牌将给你财务上的启示。理性决策、稳健投资是财富增长的关键。\n';
+        }
+        text += '- 🧘 **心灵成长**：无论牌面如何，请记住塔罗是你潜意识的镜子。真正的力量不在牌中，而在你解读牌面时内心的共鸣之中。\n';
+        text += '- 🌟 **行动建议**：牌阵已经揭示了当下的能量状态，下一步就是你的行动。选一张最有共鸣的牌，让它成为你这周的精神指引。\n';
+
+        text += '\n---\n> 🌙 塔罗牌是你潜意识的镜子，解读仅供参考。最终的选择权永远在你手中。';
 
         return {
             reading_id:'local-'+Date.now(), spread_name:s.name, spread_description:s.desc,
             question:state.question, cards, overall_reading:text,
             ai_powered:false, created_at:new Date().toISOString()
         };
+    }
+
+    function getPositionContext(pos, card, allCards) {
+        // 根据牌位位置给出语境化注释
+        const contexts = {
+            '过去': '这张牌揭示了过去影响当前局面的因素。它可能代表已经发生的事、你过去的某个选择，或是你从过去带来的经验模式。',
+            '现在': '这张牌照见了你当下的核心状态和面临的直接课题。聚焦于此，这是你需要觉察和处理的。',
+            '未来': '这张牌指向可能的趋势和发展方向。请记住，未来是流动的，你可以通过当下的选择来改变它。',
+            '核心问题': '这是整个牌阵的核心，是你此刻最需要面对的灵魂课题。',
+            '阻碍或助力': '这张牌代表横跨核心问题的能量——可能是阻力，也可能转化为助力。',
+            '基础': '这张牌揭示了问题的深层根源和地基，是你需要了解的根本。',
+            '过去影响': '过往的经历如何塑造了你当前的处境和心态。',
+            '可能结果': '如果按照当前趋势发展，可能出现的走向。',
+            '近未来': '短期内即将显现的能量和事件。',
+            '你的态度': '你对此事的内在心态、信念和应对方式。',
+            '外界环境': '外部世界如何看待你、如何影响你的处境。',
+            '希望与恐惧': '你的深层渴望和深层不安同时存在于这张牌中。',
+            '最终结果': '综合所有因素后呈现的最终趋势和结果。',
+        };
+        if (contexts[pos]) return contexts[pos];
+
+        // 根据位置序号智能生成
+        const idx = card.position_index;
+        if (idx === 0) return '牌阵的起点，奠定整个解读的基调。';
+        if (idx === allCards.length - 1) return '牌阵的终点，揭示整个能量流动的归宿。';
+        return null;
     }
 
     // ==================== 渲染结果 ====================
