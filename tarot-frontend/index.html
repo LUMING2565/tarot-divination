@@ -100,9 +100,20 @@
         .card-front {
             background: linear-gradient(180deg, #f5f0e8, #e8dcc8);
             border: 2px solid #8b6914; transform: rotateY(180deg);
-            padding: 10px 8px; display: flex; flex-direction: column; align-items: center;
+            padding: 0; display: flex; flex-direction: column; align-items: center;
+            overflow: hidden; position: relative;
         }
         .card-front.reversed-card { transform: rotateY(180deg) rotateZ(180deg); }
+        .card-front img {
+            width: 100%; height: 100%; object-fit: cover; position: absolute; top:0; left:0;
+            border-radius: 8px;
+        }
+        .card-front .card-overlay {
+            position: relative; z-index: 1; padding: 10px 8px;
+            display: flex; flex-direction: column; align-items: center;
+            background: rgba(245,240,232,0.85); border-radius: 8px;
+            width: 100%; box-sizing: border-box;
+        }
         .card-type-badge { font-size: 9px; background: var(--purple); color: #fff; padding: 1px 8px; border-radius: 8px; letter-spacing: 1px; }
         .card-front .card-name { color: #2a1050; font-size: 14px; font-weight: bold; margin: 6px 0; letter-spacing: 1px; text-align: center; line-height: 1.2; }
         .card-front .card-element { font-size: 9px; color: #6a5090; }
@@ -409,15 +420,20 @@
         const deck = [];
         // Major Arcana
         MAJOR.forEach((c,i) => {
+            const num = String(i).padStart(2,'0');
             deck.push({
                 id:i, type:"major", name_zh:c.n, name_en:c.en, suit:null, suit_zh:null,
                 element:c.e, keywords:c.kw,
                 upright:{summary:c.u.s, love:c.u.l, career:c.u.c, fortune:c.u.f},
-                reversed:{summary:c.r.s, love:c.r.l, career:c.r.c, fortune:c.r.f}
+                reversed:{summary:c.r.s, love:c.r.l, career:c.r.c, fortune:c.r.f},
+                img: picUrl('ar'+num)
             });
         });
-        // Minor Arcana — 根据花色生成不同领域的解读
+        // Minor Arcana
         let cid = 22;
+        const suitCodes = {wands:'w', cups:'c', swords:'s', pentacles:'p'};
+        const rankCodes = {ace:'ac', two:'02', three:'03', four:'04', five:'05', six:'06',
+            seven:'07', eight:'08', nine:'09', ten:'10', page:'pa', knight:'kn', queen:'qu', king:'ki'};
         for (const [sk, si] of Object.entries(MINOR_SUITS)) {
             for (const rk of MINOR_RANKS) {
                 const m = MINOR_MEANINGS[sk][rk];
@@ -426,11 +442,17 @@
                 deck.push({
                     id:cid++, type:"minor", name_zh:`${si.zh}${rzh}`, name_en:`${rk[0].toUpperCase()+rk.slice(1)} of ${sk[0].toUpperCase()+sk.slice(1)}`,
                     suit:sk, suit_zh:si.zh, element:si.e, keywords:[],
-                    upright:expanded.u, reversed:expanded.r
+                    upright:expanded.u, reversed:expanded.r,
+                    img: picUrl(suitCodes[sk] + rankCodes[rk])
                 });
             }
         }
         return deck;
+    }
+
+    function picUrl(code) {
+        // 百年韦特塔罗牌 — 公共领域图片源
+        return `https://www.sacred-texts.com/tarot/pics/${code}.jpg`;
     }
 
     function expandMinorMeaning(m, suit) {
@@ -521,12 +543,15 @@
         const front = el.querySelector('.card-front');
         front.className = `card-face card-front ${isRev?'reversed-card':''}`;
         front.innerHTML = `
-            ${isRev?'<div class="reversed-badge">逆位</div>':''}
-            <div class="card-type-badge">${card.type==='major'?'大阿卡纳':card.suit_zh||''}</div>
-            <div class="card-name">${card.name_zh}</div>
-            <div class="card-element">${card.element||''}</div>
-            <div class="card-keywords">${(card.keywords||[]).slice(0,4).join(' · ')}</div>
-            <div class="card-position-label">第${index+1}张</div>`;
+            <img src="${cardData.img||''}" alt="${cardData.name_zh}" onerror="this.style.display='none'" loading="lazy">
+            <div class="card-overlay">
+                ${isRev?'<div class="reversed-badge">逆位</div>':''}
+                <div class="card-type-badge">${cardData.type==='major'?'大阿卡纳':cardData.suit_zh||''}</div>
+                <div class="card-name">${cardData.name_zh}</div>
+                <div class="card-element">${cardData.element||''}</div>
+                <div class="card-keywords">${(cardData.keywords||[]).slice(0,4).join(' · ')}</div>
+                <div class="card-position-label">第${index+1}张</div>
+            </div>`;
 
         const remaining = state.totalCards - state.drawnCount;
         if (remaining > 0) {
@@ -918,34 +943,43 @@
         document.getElementById('resultTitle').innerHTML = r.spread_name +
             (r.ai_powered ? ' <span class="ai-badge">🤖 AI增强</span>' : '');
         document.getElementById('resultInfo').textContent = r.question ? '问：「' + r.question + '」' : r.spread_description;
-        document.getElementById('resultInfo').textContent = r.question ? `问：「${r.question}」` : r.spread_description;
 
         document.getElementById('resultCards').innerHTML = r.cards.map((c,i) => `
             <div class="result-mini-card played" style="cursor:pointer" onclick="document.getElementById('cardInterp${i}').scrollIntoView({behavior:'smooth',block:'center'})">
                 <div class="mini-inner">
                     <div class="mini-face mini-back"><span>✦</span></div>
-                    <div class="mini-face mini-front">
-                        <div class="mini-name">${c.name_zh}</div>
-                        <div class="mini-pos">${c.position}</div>
-                        <div style="font-size:8px;color:${c.is_reversed?'#c0392b':'#4a9'};margin-top:2px;">${c.is_reversed?'逆位 ⚠️':'正位 ✨'}</div>
+                    <div class="mini-face mini-front" style="padding:0;overflow:hidden;">
+                        <img src="${c.img||''}" alt="${c.name_zh}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'" loading="lazy">
+                        <div style="position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:4px;background:rgba(245,240,232,0.8);width:100%;height:100%;box-sizing:border-box;">
+                            <div class="mini-name">${c.name_zh}</div>
+                            <div class="mini-pos">${c.position}</div>
+                            <div style="font-size:7px;color:${c.is_reversed?'#c0392b':'#4a9'};margin-top:1px;">${c.is_reversed?'逆位':'正位'}</div>
+                        </div>
                     </div>
                 </div>
             </div>`).join('');
 
         let html = '<h3>📜 牌阵解读</h3>';
         r.cards.forEach((c,i) => {
-            const interp = c.interpretation;
+            const interp = c.interpretation || {};
             html += `<div class="card-interp" id="cardInterp${i}">
-                <div class="card-interp-header">
-                    <span class="card-title">${c.name_zh}</span>
-                    <span class="pos-tag">${c.position}</span>
-                    ${c.is_reversed?'<span class="rev-tag">逆位 ⚠️</span>':'<span style="color:#d4a843;font-size:11px;">正位 ✨</span>'}
-                </div>
-                <div class="card-interp-summary">${interp.summary||interp.s||''}</div>
-                <div class="interp-grid">
-                    ${interp.love?`<div class="interp-item"><strong>💕 感情</strong><br>${interp.love}</div>`:''}
-                    ${interp.career?`<div class="interp-item"><strong>💼 事业</strong><br>${interp.career}</div>`:''}
-                    ${interp.fortune?`<div class="interp-item"><strong>💰 财运</strong><br>${interp.fortune}</div>`:''}
+                <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+                    <div style="width:90px;height:140px;flex-shrink:0;border-radius:8px;overflow:hidden;border:2px solid #8b6914;background:linear-gradient(135deg,#1a1040,#2d1050);">
+                        <img src="${c.img||''}" alt="${c.name_zh}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.display='none'" loading="lazy">
+                    </div>
+                    <div style="flex:1;min-width:180px;">
+                        <div class="card-interp-header">
+                            <span class="card-title">${c.name_zh}</span>
+                            <span class="pos-tag">${c.position}</span>
+                            ${c.is_reversed?'<span class="rev-tag">逆位 ⚠️</span>':'<span style="color:#d4a843;font-size:11px;">正位 ✨</span>'}
+                        </div>
+                        <div class="card-interp-summary">${interp.summary||interp.s||'请参考综合解读'}</div>
+                        <div class="interp-grid">
+                            ${interp.love?`<div class="interp-item"><strong>💕 感情</strong><br>${interp.love}</div>`:''}
+                            ${interp.career?`<div class="interp-item"><strong>💼 事业</strong><br>${interp.career}</div>`:''}
+                            ${interp.fortune?`<div class="interp-item"><strong>💰 财运</strong><br>${interp.fortune}</div>`:''}
+                        </div>
+                    </div>
                 </div>
             </div>`;
         });
