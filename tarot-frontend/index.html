@@ -591,7 +591,44 @@
         return deck;
     }
 
-    function picUrl(code) { return ''; } // 使用 CSS 卡面，无需外部图片
+    // 卡牌图片 URL 映射表（RWS 百年韦特塔罗牌）
+    const CARD_IMG_BASE = 'cards/rws/';
+    const CARD_IMG_MAP = (function() {
+        const m = {};
+        // 大阿卡纳: ar00 ~ ar21
+        const MAJOR_NAMES = [
+            '00-the-fool','01-the-magician','02-the-high-priestess','03-the-empress','04-the-emperor',
+            '05-the-hierophant','06-the-lovers','07-the-chariot','08-strength','09-the-hermit',
+            '10-wheel-of-fortune','11-justice','12-the-hanged-man','13-death','14-temperance',
+            '15-the-devil','16-the-tower','17-the-star','18-the-moon','19-the-sun','20-judgement','21-the-world'
+        ];
+        for (let i = 0; i < 22; i++) {
+            m['ar' + String(i).padStart(2,'0')] = CARD_IMG_BASE + MAJOR_NAMES[i] + '.jpg';
+        }
+        // 小阿卡纳
+        const suits = [
+            {code:'w', name:'wands',  base:22},
+            {code:'c', name:'cups',   base:36},
+            {code:'s', name:'swords', base:50},
+            {code:'p', name:'pentacles', base:64}
+        ];
+        const ranks = [
+            {code:'ac', name:'ace'},{code:'02', name:'two'},{code:'03', name:'three'},
+            {code:'04', name:'four'},{code:'05', name:'five'},{code:'06', name:'six'},
+            {code:'07', name:'seven'},{code:'08', name:'eight'},{code:'09', name:'nine'},
+            {code:'10', name:'ten'},{code:'pa', name:'page'},{code:'kn', name:'knight'},
+            {code:'qu', name:'queen'},{code:'ki', name:'king'}
+        ];
+        for (const s of suits) {
+            for (let i = 0; i < ranks.length; i++) {
+                const num = s.base + i;
+                m[s.code + ranks[i].code] = CARD_IMG_BASE + String(num).padStart(2,'0') + '-' + ranks[i].name + '-of-' + s.name + '.jpg';
+            }
+        }
+        return m;
+    })();
+
+    function picUrl(code) { return CARD_IMG_MAP[code] || ''; }
 
     // 根据花色/元素生成卡面样式
     function cardFaceStyle(card) {
@@ -785,36 +822,46 @@
             flyClone.style.transform = 'rotateY(180deg)';
             const cs = cardFaceStyle(cardData);
             const front = flyClone.querySelector('.front-face');
+            const flyImgUrl = cardData.img || '';
             front.style.cssText = `
                 position:absolute;top:0;left:0;width:100%;height:100%;
                 border-radius:14px;backface-visibility:hidden;
                 background:linear-gradient(180deg,#f5f0e8,#e8dcc8);
                 border:2px solid #8b6914;
                 display:flex;flex-direction:column;align-items:center;
-                justify-content:center;padding:10px 6px;box-sizing:border-box;`;
-            front.innerHTML = `
+                justify-content:center;padding:10px 6px;box-sizing:border-box;
+                overflow:hidden;`;
+            front.innerHTML = (flyImgUrl ? `<img src="${flyImgUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" alt="">` : '') + `
+                <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;width:100%;
+                    ${flyImgUrl ? 'background:linear-gradient(180deg,rgba(0,0,0,0.55),rgba(0,0,0,0.35));border-radius:12px;' : ''}">
                 <div style="font-size:24px;margin-bottom:2px;">${cs.icon}</div>
-                <div style="font-size:8px;color:${cs.accent};letter-spacing:1px;">${cardData.type==='major'?'大阿卡纳':cardData.suit_zh||''}</div>
-                <div style="color:#2a1050;font-weight:bold;font-size:12px;text-align:center;line-height:1.2;margin:3px 0;">${cardData.name_zh}</div>
-                <div style="font-size:7px;color:#6a5090;">${cardData.element||''}元素</div>
-                <div style="font-size:9px;color:${isRev?'#c0392b':'#27ae60'};font-weight:bold;margin-top:2px;">${isRev?'⚠ 逆位':'✨ 正位'}</div>`;
+                <div style="font-size:8px;color:${flyImgUrl?'#f0d68a':cs.accent};letter-spacing:1px;">${cardData.type==='major'?'大阿卡纳':cardData.suit_zh||''}</div>
+                <div style="color:${flyImgUrl?'#fff':'#2a1050'};font-weight:bold;font-size:12px;text-align:center;line-height:1.2;margin:3px 0;">${cardData.name_zh}</div>
+                <div style="font-size:7px;color:${flyImgUrl?'#d4a843':'#6a5090'};">${cardData.element||''}元素</div>
+                <div style="font-size:9px;color:${isRev?'#e74c3c':'#2ecc71'};font-weight:bold;margin-top:2px;">${isRev?'⚠ 逆位':'✨ 正位'}</div>
+                </div>`;
         }, 880);
 
         // 翻转完成 → 在槽位中渲染永久牌面 + 移除飞行副本
         setTimeout(() => {
             const cs = cardFaceStyle(cardData);
             slot.classList.add('filled');
+            const slotImgUrl = cardData.img || '';
             slot.innerHTML = `
                 <div style="width:130px;height:200px;border-radius:14px;display:flex;flex-direction:column;
                     align-items:center;justify-content:center;padding:10px 6px;box-sizing:border-box;
                     background:linear-gradient(180deg,#f5f0e8,#e8dcc8);border:2px solid #8b6914;
-                    box-shadow:0 4px 15px rgba(0,0,0,0.3);position:relative;">
+                    box-shadow:0 4px 15px rgba(0,0,0,0.3);position:relative;overflow:hidden;">
+                    ${slotImgUrl ? '<img src="'+slotImgUrl+'" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" alt="">' : ''}
+                    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;width:100%;
+                        ${slotImgUrl ? 'background:linear-gradient(180deg,rgba(0,0,0,0.55),rgba(0,0,0,0.35));border-radius:12px;' : ''}">
                     <div style="font-size:28px;margin-bottom:4px;">${cs.icon}</div>
-                    <div style="font-size:9px;color:${cs.accent};letter-spacing:2px;">${cardData.type==='major'?'大阿卡纳':cardData.suit_zh||''}</div>
-                    <div style="color:#2a1050;font-weight:bold;font-size:13px;text-align:center;line-height:1.2;margin:4px 0;">${cardData.name_zh}</div>
-                    <div style="font-size:8px;color:#6a5090;">${cardData.element||''}元素</div>
+                    <div style="font-size:9px;color:${slotImgUrl?'#f0d68a':cs.accent};letter-spacing:2px;">${cardData.type==='major'?'大阿卡纳':cardData.suit_zh||''}</div>
+                    <div style="color:${slotImgUrl?'#fff':'#2a1050'};font-weight:bold;font-size:13px;text-align:center;line-height:1.2;margin:4px 0;">${cardData.name_zh}</div>
+                    <div style="font-size:8px;color:${slotImgUrl?'#d4a843':'#6a5090'};">${cardData.element||''}元素</div>
                     <div style="font-size:10px;color:${isRev?'#c0392b':'#27ae60'};font-weight:bold;margin-top:4px;">${isRev?'⚠ 逆位':'✨ 正位'}</div>
                     ${isRev?'<div style="position:absolute;top:6px;right:8px;background:#c0392b;color:#fff;font-size:9px;padding:2px 8px;border-radius:5px;">逆位</div>':''}
+                    </div>
                 </div>`;
             slot.style.border = 'none';
             // 清理飞行副本
@@ -1218,14 +1265,18 @@
 
         document.getElementById('resultCards').innerHTML = r.cards.map((c,i) => {
             const cs = cardFaceStyle(c);
+            const miniImg = c.img || '';
             return `<div class="result-mini-card played" style="cursor:pointer" onclick="document.getElementById('cardInterp${i}').scrollIntoView({behavior:'smooth',block:'center'})">
                 <div class="mini-inner">
                     <div class="mini-face mini-back"><span>✦</span></div>
-                    <div class="mini-face mini-front" style="padding:6px;background:${cs.bg};border-color:${cs.border};display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                    <div class="mini-face mini-front" style="padding:6px;background:${cs.bg};border-color:${cs.border};display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;">
+                        ${miniImg ? '<img src="'+miniImg+'" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="">' : ''}
+                        <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;${miniImg?'text-shadow:0 1px 2px rgba(0,0,0,0.8);':''}">
                         <div style="font-size:16px;">${cs.icon}</div>
-                        <div class="mini-name" style="color:#fff;">${c.name_zh}</div>
+                        <div class="mini-name" style="color:${miniImg?'#f0d68a':'#fff'};">${c.name_zh}</div>
                         <div class="mini-pos" style="color:${cs.accent};">${c.position}</div>
                         <div style="font-size:7px;color:${c.is_reversed?'#e74c3c':'#2ecc71'};margin-top:1px;">${c.is_reversed?'⚠逆位':'✨正位'}</div>
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -1240,12 +1291,15 @@
             var fortuneTxt = interp.fortune || interp.f || '';
             var summaryTxt = interp.summary || interp.s || '';
             var cs = cardFaceStyle(c);
+            var interpImg = c.img || '';
             html += '<div class="card-interp" id="cardInterp' + i + '">';
             html += '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">';
-            html += '<div style="width:80px;height:120px;flex-shrink:0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;' + (cs.bg.startsWith('linear') ? 'background:'+cs.bg : 'background:'+cs.bg) + ';border:2px solid ' + cs.border + ';">';
+            html += '<div style="width:80px;height:120px;flex-shrink:0;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;' + (cs.bg.startsWith('linear') ? 'background:'+cs.bg : 'background:'+cs.bg) + ';border:2px solid ' + cs.border + ';">';
+            html += (interpImg ? '<img src="'+interpImg+'" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="">' : '');
+            html += '<div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;' + (interpImg ? 'text-shadow:0 1px 2px rgba(0,0,0,0.8);' : '') + '">';
             html += '<div style="font-size:28px;">' + cs.icon + '</div>';
-            html += '<div style="font-size:10px;color:' + cs.accent + ';font-weight:bold;text-align:center;line-height:1.1;margin-top:4px;">' + c.name_zh + '</div>';
-            html += '<div style="font-size:8px;color:' + (c.is_reversed ? '#e74c3c' : '#2ecc71') + ';margin-top:2px;">' + (c.is_reversed ? '逆位' : '正位') + '</div></div>';
+            html += '<div style="font-size:10px;color:' + (interpImg ? '#f0d68a' : cs.accent) + ';font-weight:bold;text-align:center;line-height:1.1;margin-top:4px;">' + c.name_zh + '</div>';
+            html += '<div style="font-size:8px;color:' + (c.is_reversed ? '#e74c3c' : '#2ecc71') + ';margin-top:2px;">' + (c.is_reversed ? '逆位' : '正位') + '</div></div></div>';
             html += '<div style="flex:1;min-width:180px;">';
             html += '<div class="card-interp-header"><span class="card-title">' + c.name_zh + ' · ' + (c.name_en||'') + '</span>';
             html += '<span class="pos-tag">' + c.position + '</span>';
