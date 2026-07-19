@@ -210,12 +210,39 @@
         .draw-slot .slot-hint {
             color: rgba(212,168,67,0.3); font-size: 32px;
         }
+        /* 78张牌摊开 */
+        .mini-pick-card {
+            width: 56px; height: 84px; border-radius: 6px; cursor: pointer;
+            position: relative; transform-style: preserve-3d;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            flex-shrink: 0;
+        }
+        .mini-pick-card:hover { transform: translateY(-6px) scale(1.08); z-index: 10; box-shadow: 0 0 16px rgba(212,168,67,0.5); }
+        .mini-pick-card.selected {
+            transform: translateY(-10px) scale(1.1);
+            box-shadow: 0 0 20px rgba(212,168,67,0.7);
+            border: 2px solid var(--gold) !important;
+        }
+        .mini-pick-card .mini-back {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: linear-gradient(135deg, #0d0d2b, #2d1050);
+            border: 1.5px solid rgba(212,168,67,0.4); border-radius: 6px;
+            backface-visibility: hidden; z-index: 2;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .mini-pick-card .mini-back span { font-size: 18px; color: #d4a843; }
+        .mini-pick-card .mini-back .mini-idx {
+            position: absolute; bottom: 2px; font-size: 7px; color: rgba(212,168,67,0.5);
+        }
+
         @media (max-width: 500px) {
             .stack-card { width: 100px; height: 155px; }
             .card-stack-container { width: 130px; height: 190px; }
             .draw-slot { width: 100px; height: 155px; }
             #drawSlots { gap: 12px; min-height: 170px; }
             #shuffleArea { gap: 16px; }
+            .mini-pick-card { width: 44px; height: 66px; }
+            #cardSpread { gap: 5px; padding: 6px; }
         }
         .card-type-badge { font-size: 9px; background: var(--purple); color: #fff; padding: 1px 8px; border-radius: 8px; letter-spacing: 1px; }
         .card-front .card-name { color: #2a1050; font-size: 14px; font-weight: bold; margin: 6px 0; letter-spacing: 1px; text-align: center; line-height: 1.2; }
@@ -320,18 +347,22 @@
             </div>
         </div>
 
-        <!-- Step 2: 3D Animated Draw -->
+        <!-- Step 2: 78张牌摊开选牌 -->
         <div class="step" id="stepDraw">
-            <div class="draw-instruction" id="drawInstruction">✨ 点击"开始洗牌"体验 3D 塔罗仪式</div>
-            <div id="shuffleArea">
-                <div class="card-stack-container" id="cardStackContainer">
-                    <!-- JS 动态生成堆叠牌 -->
-                </div>
-                <button class="btn" id="btnShuffle" onclick="startShuffle()" style="max-width:280px;">🌀 开始洗牌</button>
+            <div class="draw-instruction" id="drawInstruction">🃏 从 78 张牌中凭直觉选择</div>
+
+            <!-- 已选牌槽位 -->
+            <div id="drawSlots" style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;min-height:220px;align-items:center;">
             </div>
-            <div id="drawSlots">
-                <!-- JS 动态生成抽牌槽位 -->
+
+            <!-- 78张牌摊开区 -->
+            <div style="text-align:center;margin:10px 0;">
+                <button class="btn" id="btnShuffleCards" onclick="shuffleSpread()" style="max-width:260px;display:inline-block;">🌀 洗牌</button>
             </div>
+            <div id="cardSpread" style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:10px;max-height:50vh;overflow-y:auto;perspective:1000px;background:rgba(10,8,30,0.3);border-radius:16px;border:1px solid rgba(212,168,67,0.1);">
+                <!-- JS 动态生成78张牌 -->
+            </div>
+
             <div class="btn-row" style="max-width:300px;margin:20px auto 0;display:none;" id="drawActions">
                 <button class="btn" onclick="getReading()" style="flex:1;">🔮 查看解读</button>
             </div>
@@ -632,37 +663,17 @@
         el.classList.add('selected'); state.spreadType = type;
     }
 
-    // ==================== 3D 洗牌 & 抽牌动画系统 ====================
-    const STACK_CARDS = 8; // 堆叠牌数量
-    let shuffled = false;
+    // ==================== 78张牌摊开选牌系统 ====================
     let drawAnimating = false;
 
     function startReading() {
         state.question = document.getElementById('questionInput').value.trim();
         state.drawnCards = []; state.drawnCount = 0; state.readingResult = null;
-        state.aiPowered = false; shuffled = false; drawAnimating = false;
+        state.aiPowered = false; drawAnimating = false;
         const s = SPREADS[state.spreadType]; state.totalCards = s.count;
         switchStep('stepDraw');
         document.getElementById('drawActions').style.display = 'none';
-        document.getElementById('btnShuffle').style.display = '';
-        document.getElementById('btnShuffle').disabled = false;
-        document.getElementById('drawInstruction').textContent = '✨ 点击"开始洗牌"体验 3D 塔罗仪式';
-
-        // 构建牌堆
-        const container = document.getElementById('cardStackContainer');
-        container.innerHTML = '';
-        for (let i = 0; i < STACK_CARDS; i++) {
-            const card = document.createElement('div');
-            card.className = 'stack-card';
-            card.id = 'stackCard' + i;
-            card.style.setProperty('--i', i);
-            card.style.transform = `translate(${(i-STACK_CARDS/2)*0.8}px, ${-i*0.8}px) rotate(${(Math.random()-0.5)*2}deg)`;
-            card.style.zIndex = STACK_CARDS - i;
-            card.innerHTML = `
-                <div class="back-face"><div class="back-star">✦</div></div>
-                <div class="front-face"></div>`;
-            container.appendChild(card);
-        }
+        document.getElementById('drawInstruction').textContent = `🃏 从 78 张牌中凭直觉选择 ${s.count} 张`;
 
         // 构建抽牌槽位
         const slots = document.getElementById('drawSlots');
@@ -673,52 +684,62 @@
             slot.innerHTML = '<div class="slot-hint">?</div>';
             slots.appendChild(slot);
         }
+
+        // 构建78张牌摊开
+        buildCardSpread();
     }
 
-    function startShuffle() {
-        if (shuffled) return;
-        shuffled = true;
-        document.getElementById('btnShuffle').disabled = true;
-        document.getElementById('drawInstruction').textContent = '🌀 宇宙正在为你洗牌...';
+    function buildCardSpread() {
+        const spread = document.getElementById('cardSpread');
+        spread.innerHTML = '';
+        // 创建所有78张牌的摊开副本（随机打乱顺序）
+        const indices = Array.from({length: 78}, (_,i) => i);
+        for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
 
-        const cards = document.querySelectorAll('.stack-card');
-        // 清除旧变换，开始洗牌
-        cards.forEach((card, i) => {
-            card.classList.add('shuffling');
-            card.style.setProperty('--sx', ((Math.random() - 0.5) * 120) + 'px');
-            card.style.setProperty('--sy', ((Math.random() - 0.5) * 60 - 30) + 'px');
-            card.style.setProperty('--sr', ((Math.random() - 0.5) * 14) + 'deg');
-            card.style.animationDelay = (i * 0.05) + 's';
+        indices.forEach((cardIdx, displayIdx) => {
+            const cardData = ALL_CARDS[cardIdx];
+            const div = document.createElement('div');
+            div.className = 'mini-pick-card';
+            div.id = 'pickCard' + cardIdx;
+            div.innerHTML = `
+                <div class="mini-back">
+                    <span>✦</span>
+                    <div class="mini-idx">${displayIdx+1}</div>
+                </div>`;
+            div.onclick = function() { pickCard(cardIdx, this); };
+            spread.appendChild(div);
         });
-
-        // 洗牌完成后重置
-        setTimeout(() => {
-            cards.forEach((card, i) => {
-                card.classList.remove('shuffling');
-                card.classList.add('shuffle-done');
-                card.style.animationDelay = '';
-                card.style.transform = `translate(${(i-STACK_CARDS/2)*0.8}px, ${-i*0.8}px) rotate(${(Math.random()-0.5)*2}deg)`;
-                card.style.setProperty('--sx', ''); card.style.setProperty('--sy', ''); card.style.setProperty('--sr', '');
-            });
-            document.getElementById('drawInstruction').textContent = `🃏 点击牌堆顶部抽取 ${state.totalCards} 张塔罗牌`;
-        }, 1300);
-
-        // 使牌堆可点击
-        setTimeout(() => {
-            const topCard = document.getElementById('stackCard' + (STACK_CARDS - 1));
-            if (topCard) {
-                topCard.style.cursor = 'pointer';
-                topCard.onclick = () => drawCardFromStack(STACK_CARDS - 1);
-            }
-        }, 1400);
     }
 
-    function drawCardFromStack(stackIndex) {
+    function shuffleSpread() {
+        const spread = document.getElementById('cardSpread');
+        const cards = spread.querySelectorAll('.mini-pick-card');
+        // 快速洗牌动画：每张牌随机震动
+        cards.forEach((card, i) => {
+            card.style.transition = 'none';
+            card.style.transform = `translate(${(Math.random()-0.5)*8}px, ${(Math.random()-0.5)*8}px) rotate(${(Math.random()-0.5)*10}deg)`;
+        });
+        document.getElementById('drawInstruction').textContent = '🌀 正在洗牌...';
+        setTimeout(() => {
+            cards.forEach(card => {
+                card.style.transition = 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)';
+                card.style.transform = '';
+            });
+            document.getElementById('drawInstruction').textContent = `🃏 从 78 张牌中凭直觉选择 ${state.totalCards} 张`;
+        }, 150);
+        // 重新随机排列
+        setTimeout(() => buildCardSpread(), 350);
+    }
+
+    function pickCard(cardIdx, el) {
         if (drawAnimating || state.drawnCount >= state.totalCards) return;
+        if (el.classList.contains('selected')) return;
         drawAnimating = true;
 
-        // 随机选牌
-        const card = ALL_CARDS[Math.floor(Math.random() * 78)];
+        const card = ALL_CARDS[cardIdx];
         const isRev = Math.random() < 0.3;
         const cardData = {
             ...card, is_reversed: isRev,
@@ -728,86 +749,78 @@
         const slotIndex = state.drawnCount;
         state.drawnCount++;
 
-        const cardEl = document.getElementById('stackCard' + stackIndex);
+        // 标记选中
+        el.classList.add('selected');
+
+        // 飞入槽位：创建飞行副本
         const slot = document.getElementById('slot' + slotIndex);
-
-        // 计算飞行目标
+        const spreadRect = document.getElementById('cardSpread').getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
         const slotRect = slot.getBoundingClientRect();
-        const containerRect = document.getElementById('cardStackContainer').getBoundingClientRect();
-        const targetX = slotRect.left - containerRect.left + slotRect.width / 2 - 65;
-        const targetY = slotRect.top - containerRect.top + 10;
 
-        // 设置飞行动画
-        cardEl.style.setProperty('--fx', targetX + 'px');
-        cardEl.style.setProperty('--fy', targetY + 'px');
-        cardEl.style.setProperty('--fr', ((Math.random() - 0.5) * 8) + 'deg');
-        cardEl.style.zIndex = '100';
-        cardEl.classList.add('flying-card');
+        const flyClone = document.createElement('div');
+        flyClone.className = 'stack-card';
+        flyClone.style.cssText = `
+            position:fixed; z-index:999; width:${elRect.width}px; height:${elRect.height}px;
+            left:${elRect.left}px; top:${elRect.top}px; border-radius:14px;
+            transform-style:preserve-3d; pointer-events:none;`;
+        flyClone.innerHTML = `<div class="back-face"><div class="back-star">✦</div></div><div class="front-face"></div>`;
+        document.body.appendChild(flyClone);
 
-        // 飞行完成后翻转
+        // 飞行+翻转动画
+        const targetX = slotRect.left + slotRect.width/2 - elRect.width/2;
+        const targetY = slotRect.top + slotRect.height/2 - elRect.height/2;
+
+        requestAnimationFrame(() => {
+            flyClone.style.transition = 'all 0.8s cubic-bezier(0.22,0.61,0.36,1)';
+            flyClone.style.left = targetX + 'px';
+            flyClone.style.top = targetY + 'px';
+            flyClone.style.width = '130px';
+            flyClone.style.height = '200px';
+            flyClone.style.transform = 'rotate(' + ((Math.random()-0.5)*10) + 'deg)';
+        });
+
+        // 飞行到位后翻转
         setTimeout(() => {
-            cardEl.classList.remove('flying-card');
-            cardEl.classList.add('flipping');
-            cardEl.style.transform = `translate(${targetX}px, ${targetY}px) rotateY(0deg)`;
+            flyClone.style.transition = 'transform 0.6s ease-in-out';
+            flyClone.style.transform = 'rotateY(180deg)';
+            // 更新正面内容
+            const cs = cardFaceStyle(cardData);
+            const front = flyClone.querySelector('.front-face');
+            front.innerHTML = `
+                <div style="font-size:26px;margin-bottom:4px;">${cs.icon}</div>
+                <div style="font-size:9px;color:${cs.accent};">${cardData.type==='major'?'MAJOR':cardData.suit_zh||''}</div>
+                <div style="color:#2a1050;font-weight:bold;font-size:13px;text-align:center;line-height:1.2;margin:4px 0;">${cardData.name_zh}</div>
+                <div style="font-size:8px;color:#6a5090;">${cardData.element||''}元素</div>
+                ${isRev?'<div style="position:absolute;top:4px;right:6px;background:#c0392b;color:#fff;font-size:8px;padding:2px 6px;border-radius:4px;">逆位</div>':''}`;
+            front.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:14px;backface-visibility:hidden;background:linear-gradient(180deg,#f5f0e8,#e8dcc8);border:2px solid #8b6914;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 8px;box-sizing:border-box;';
+        }, 850);
 
-            // 翻转中途更新正面内容
-            setTimeout(() => {
-                const cs = cardFaceStyle(cardData);
-                const front = cardEl.querySelector('.front-face');
-                front.innerHTML = `
-                    <div style="font-size:22px;margin-bottom:2px;">${cs.icon}</div>
-                    <div style="font-size:8px;color:${cs.accent};letter-spacing:1px;">${cardData.type==='major'?'MAJOR':cardData.suit_zh||''}</div>
-                    <div style="color:#2a1050;font-weight:bold;font-size:11px;text-align:center;line-height:1.2;margin:3px 0;">${cardData.name_zh}</div>
-                    <div style="font-size:7px;color:#6a5090;">${cardData.element||''}元素</div>
-                    ${isRev?'<div style="position:absolute;top:3px;right:5px;background:#c0392b;color:#fff;font-size:7px;padding:1px 4px;border-radius:4px;">逆位</div>':''}`;
-            }, 350);
+        // 完成
+        setTimeout(() => {
+            slot.classList.add('filled');
+            slot.querySelector('.slot-hint').textContent = cardData.name_zh;
+            slot.querySelector('.slot-hint').style.cssText = 'font-size:12px;color:#d4a843;';
+            // 清理飞行副本
+            setTimeout(() => { if (flyClone.parentNode) flyClone.remove(); }, 300);
+            drawAnimating = false;
 
-            // 翻转完成
-            setTimeout(() => {
-                cardEl.classList.remove('flipping');
-                cardEl.style.transform = `translate(${targetX}px, ${targetY}px) rotateY(180deg)`;
-                cardEl.style.pointerEvents = 'none';
-                slot.classList.add('filled');
-                slot.querySelector('.slot-hint').textContent = cardData.name_zh;
-                slot.querySelector('.slot-hint').style.fontSize = '11px';
-                slot.querySelector('.slot-hint').style.color = '#d4a843';
-
-                // 触发回调
-                if (typeof onCardRevealed === 'function') onCardRevealed(slotIndex, cardData.name_zh);
-
-                drawAnimating = false;
-
-                // 更新提示 + 下一张
-                const remaining = state.totalCards - state.drawnCount;
-                if (remaining > 0) {
-                    document.getElementById('drawInstruction').textContent = `✨ 还有 ${remaining} 张牌等待你的选择`;
-                    // 让下一张牌可点击
-                    const nextIdx = stackIndex - 1;
-                    if (nextIdx >= 0) {
-                        const nextCard = document.getElementById('stackCard' + nextIdx);
-                        nextCard.style.cursor = 'pointer';
-                        nextCard.onclick = () => drawCardFromStack(nextIdx);
-                    }
-                } else {
-                    document.getElementById('drawInstruction').textContent = '🌟 所有牌已抽完！';
-                    document.getElementById('drawActions').style.display = 'flex';
-                }
-            }, 750);
-        }, 1000);
+            const remaining = state.totalCards - state.drawnCount;
+            if (remaining > 0) {
+                document.getElementById('drawInstruction').textContent = `✨ 已选 ${state.drawnCount}/${state.totalCards} 张，还有 ${remaining} 张`;
+            } else {
+                document.getElementById('drawInstruction').textContent = '🌟 ' + state.totalCards + ' 张牌已选完！';
+                document.getElementById('drawActions').style.display = 'flex';
+            }
+        }, 1500);
     }
 
-    // 保留兼容旧接口（不再使用）
+    // 兼容旧接口
     function drawCard(index) {}
     function revealAll() {}
 
     // ==================== 获取解读 ====================
     let readingInProgress = false;
-
-    // 抽牌完成回调
-    function onCardRevealed(index, cardName) {
-        // 可在此添加音效、粒子特效等
-        console.log('Card ' + index + ' revealed: ' + cardName);
-    }
 
     async function getReading() {
         if (readingInProgress) return;
